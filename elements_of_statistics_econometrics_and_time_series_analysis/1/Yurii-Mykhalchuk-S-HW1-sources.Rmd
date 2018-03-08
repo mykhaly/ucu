@@ -1,0 +1,225 @@
+```{r}
+warnings = FALSE
+library(readxl)
+library(lmtest)
+library(e1071)
+library(dummies)
+library(car)
+library(ggplot2)
+library(sandwich)
+set.seed(1)
+data <- read.csv("/media/sf_d_drive/ucu/stat/UCU-Statistics-Part-2/student/student-mat.csv", sep = ';', header = TRUE)
+data = subset(data, select = -c(G1, G2))
+```
+$$ 1 $$
+Mjob - mother's job. 
+This variable is qualitative.
+I think it's worth making this variable dummy because we can't differentiate strings like "teacher" or "health" in numerical sense.
+As for me, the best what we can take from this data is
+
+ a) To create one dummy variable for each type "teacher", "health", "service", "at_home". Why so?
+   Taking a look at, for example, "teacher"s beta in linear regression model  we can say how students whose mother works as teacher differ from other students,        holding all other variables constant. 
+   
+   
+ b) Not to create dummy variable for "other". Why so?
+ 
+   1) Because when we will use it in a linear model we will face multi-collinearity (one value can be predicted from the other values). 
+   
+   2) If all "Mjob_teacher", "Mjob_health", "Mjob_service" and "Mjob_at_home" will be 0 we can conclude that Mjob is equal to "other".
+   
+
+goout - going out with friends.
+This variable is quantitative. 
+I think it's better to leave as it is, because nearly all students are going out with friends time to time. And current way of measurement is the best to indicate how many social connections does person have.
+$$ 2 $$
+```{r}
+kurtosis(data$G3)
+```
+
+Because value of the kurtosis is small and close to 0 we can make a conclusion that G3 is normally distributed.
+```{r}
+pairs(data$G3 ~ data$age + data$absence)
+```
+
+On this plot relation between G3 and absences looks suspicious so I decided to run the reset test on a model with only this variable as explanatory.
+```{r}
+resettest(lm(G3 ~ absences, data=data), power = 2:3, type = "fitted")
+```
+P-value is smaller than 0.05 so our model will become more precise if we will include second and third powers of absences as explanatory variables.
+```{r}
+data$absences2 <- data$absences * data$absences
+data$absences3 <- data$absences2 * data$absences
+```
+After seeing that absences have non-linear impact on our model I decided to run reset test also for G3 and age.
+```{r}
+resettest(lm(G3 ~ age, data=data), power = 2:3, type = "fitted")
+```
+The p-value is bigger than 0.05 so there is no need to include higher powers of age into our model.
+
+The next step is to convert all qualitative variables into dummies. I've done that using the package "dummies". It creates a new dummy variable for all separate values of existing qualitative (non-integer) variables. After this I removed redundant dummy variables using next algorithm: if "other"s is present as one of the values for current qualitative variable - drop the dummy which corresponds to this value; else if "no" is present - drop corresponding dummy; else - drop any dummy for current variable. 
+```{r}
+data_w_dummies <- dummy.data.frame(data, sep="_")
+data_w_dummies = subset(data_w_dummies, select = -c(school_MS, sex_F, address_R, famsize_GT3, Pstatus_A, Mjob_other, Fjob_other, reason_other, guardian_other, schoolsup_no, famsup_no, paid_no, activities_no, nursery_no, higher_no, internet_no, romantic_no))
+```
+$$ 3 $$
+```{r}
+model <- lm(G3 ~ ., data=data_w_dummies)
+summary(model)
+```
+```{r}
+linearHypothesis(model, c("Fjob_at_home", "Fjob_health", "Fjob_services", "Fjob_teacher"))
+```
+Linear hypothesis test is checking null hypothesis that all dummies for Fjob are simultaneously equal to zero.
+As we see in the output, p-value is bigger than 0.05 and it means that we don't reject null hypothesis and all dummies for Fjob are simultaneously insignificant (equal to zero).
+$$ 4 $$
+```{r}
+model$coefficients["age"]
+```
+This means 
+ * if we take two random people
+ * and all variables are the same for them
+ * but age of first one is smaller by one year
+ * this person's final grade on average will be greater by 0.41 points.
+```{r}
+model$coefficients[c("Fjob_at_home", "Fjob_health", "Fjob_services", "Fjob_teacher")]
+```
+This means 
+
+ * if we take two random people
+ 
+ * and all variables are the same for them
+ 
+ * but father's job of first one is "at home" 
+ 
+ * and father's job of second one is "other" 
+ 
+ * first person's final grade on average will be greater by 0.59 points.
+ 
+And the same if we take "health" vs "other", "services" vs "other" or "teacher" vs "other".
+```{r}
+model$coefficients["goout"]
+```
+This means 
+
+ * if we take two random people
+ 
+ * and all variables are the same for them
+ 
+ * but first person is going out with friends more often "by one point in our scale"
+ 
+ * this person's final grade on average will be smaller by 0.41 points.
+ 
+$$ 5 $$
+```{r}
+confint(model, c("absences", "famsup_yes"))
+```
+We can say with 95% of confidence that coefficient for absences lies between 0.15 and 0.5. In this case interval doesn't contain 0 inside, so, at least, we can say with 95% of confidence that this coefficient would not be 0.
+
+For famsup_yes coefficient lies inside -1.81 and 0.05. And what is important - this interval contains 0. So, there is high probability that this coefficient will be equal to 0 and famsup_yes will have no impact on G3.
+```{r}
+relation_resids <- resid(model)
+ks.test(relation_resids, mean(relation_resids), sd(relation_resids))
+```
+The Kolmogorov-Smirnov's test checks null hypothesis which states that residuals follow normal distribution. 
+
+The p-value is greater 0.05, so residuals of our model are following normal distribution and we can trust them.
+$$ 6 $$
+```{r}
+data_for_step <- data
+data_for_step$absences2 <- data_w_dummies$absences2
+data_for_step$absences3 <- data_w_dummies$absences3
+final_model <- step(lm(G3 ~ ., data=data_for_step))
+```
+On the last step of the model selection algorithm removed "famsize" variable. 
+Algorithm works next way:
+
+1) Compute Akaike information coefficient for the model with all variables.
+
+2) Remove variables from the full model separately and compute AIC for all new models. 
+
+3) Sort new models asceding by the AIC.
+
+4) If the first new model has AIC smaller than AIC of current full model we can remove corresponding variable and go to 1). Otherwise there is nothing to upgrade, exit.
+
+AIC tells nothing about absolute quality of a model, using it we can only compare two different models and say which is better taking into account models goodness-of-fit and complexity.
+```{r}
+final_data <- subset(data, select = c(G3, sex, age, address, Medu, Mjob, studytime, failures, schoolsup, famsup, romantic, goout, absences, absences2, absences3))
+```
+$$ 7 $$
+```{r}
+attach(mtcars)
+par(mfrow=c(1, 3))
+plot(final_model, which=c(5))
+plot(final_model, which = c(4))
+plot(hat(model.matrix(final_model)))
+```
+
+From this plots we can see that the obsservation under the index 277 is outlier and may have big influence on our model.
+```{r}
+final_data[277, ]
+```
+
+This guy has 75 absences. Is it really outstanding value which makes him so unique?
+```{r}
+plot(final_data$absences)
+```
+
+Looks like yes, only he missed so much. And, also, because we included second and third powers of absences into our model this observation does so big influence on it.
+$$ 8 $$
+
+I decided to rename `age` variable into `age_real` in order to have possibility to compare a precision of guess with real values.
+```{r}
+five_first_rows <- data[0:5, ]
+five_first_rows$age_real <- five_first_rows$age
+five_first_rows$age <- NULL
+rest_rows <- data[5: nrow(data), ]
+```
+The first approach of filling missing data is to insert random values from the observed range of data.
+In our case it will be random values from the range `r min(rest_rows$age)` to `r max(rest_rows$age)`.
+```{r}
+min_age = min(rest_rows$age)
+max_age = max(rest_rows$age)
+five_first_rows$age_inserted_randomly <- sample(min_age:max_age, size = 5)
+```
+The second approach is to estimate the value of age using the simple linear regression model (without G3 included). It is better than simple random insertion because there may be correlations of `age` with other variables so estimated value will be more precise.
+```{r}
+model_for_age <- lm(age ~ . - G3, data = rest_rows)
+summary(model_for_age)
+five_first_rows$age_regression <- as.integer(predict.lm(model_for_age, newdata = five_first_rows))
+```
+Results are next:
+```{r}
+cat("Real values of age: ", five_first_rows$age_real, 
+    "\nValues of age inserted by random: ", five_first_rows$age_inserted_randomly,
+    "\nValues of age inserted by regression: ", five_first_rows$age_regression, "\n")
+```
+If the value of the `higher` variable will be missed I will use logistic regression model to insert it because this model estimates binary variables.
+$$ 9 $$
+
+```{r}
+bartlett.test(resid(final_model) ~ data$goout)
+```
+
+Bartlett's tests null hypothesis is that our data is homoscedastic. The p-value is larger than 0.05 so we don't reject null hypothesis (our data is homoscedastic).
+$$ 10 $$
+```{r}
+covWhite <- vcovHC(final_model, type="HC")
+t_test <- coeftest(final_model, vcov = covWhite)
+t_test
+summary(final_model)
+```
+$$ 11 $$
+```{r}
+summary(final_model)
+```
+From our model we can make a few decisions about different influencers:
+
+  1) Male students have on average greater final result by 1 point 
+  
+  2) With age people tend to have lower results, but not very significantly (0.3 points)
+  
+  3) It's better for pupil to live in an urban area because in that case their marks will be higher by 0.75
+  
+  4) Moreover, it's better not to fail, because each additional failure decreases final mark almost by 2 points!
+  
+  5) And, das ich fantastisch, it's better for students to miss lectures - each absence adds, on average, 0.3 points to a final grade.

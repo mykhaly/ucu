@@ -1,0 +1,146 @@
+---
+title: "Yurii Mykhalchuk's third homework"
+output: html_notebook
+---
+```{r}
+library(glmnet)
+library(readxl)
+library(np)
+library(stats)
+library(MASS)
+library(pROC)
+set.seed(1)
+data <- read_excel("/media/sf_d_drive/ucu/ucu/elements_of_statistics_econometrics_and_time_series_analysis/0/ceo.xls")
+data$X__1 <- NULL
+```
+$$--1--$$
+$$a$$
+**Q: ** *Explain in your own words the idea of the lasso regression. Sketch a situation when a simple linear regression fails, but the lasso regression still can be estimated.*  
+**A: ** The idea of the lasso regression is to drop hightly correlated variables and to leave only the most significant ones. The lasso regression is more suitable than linear when we have a lot of variables which are highly correlated or when a number of variables is greater than a number of observations.  
+$$b$$
+**Q: ** *For the usual regression model the variables are rarely normalized/standardized. However, in the case of the lasso regression the scaling becomes crucial. Why?*  
+**A: ** Because if variables will have different magnitude of values they will have different impact on models coefficients.  
+$$c$$
+**Q: ** *Run a lasso regression for scaled ((x i − x  ̄ )/ˆσ x ) data with α ∈ (0, 1). Plot the estimated parameters as functions of α. Which value of α would you recommend?*  
+**A: **  
+```{r}
+variables <- scale(data[, -1])
+salary <- scale(data[, 1])
+x <- as.matrix(variables)
+y <- as.matrix(salary)
+
+grid <- seq(0, 1, length=100)
+lasso <- glmnet(x, y, alpha=1, standardize=TRUE, lambda=grid)
+cv.lasso <- cv.glmnet(x, y, alpha=1)
+plot(cv.lasso)
+plot.glmnet(lasso, xvar="lambda", label=TRUE)
+cv.lasso$lambda.min
+````
+I would recommend to use lambda = `r cv.lasso$lambda.min`.  
+$$--2--$$
+$$a$$
+**Q:** *Make a bivariate scatter plot and estimate an appropriate linear \(\!\) model. Add the regression curve to the plot.*  
+**A: **  
+```{r}
+# remove negative profits
+data <- data[data$profits > 0, ]
+profits <- log(data$profits)
+sales <- log(data$sales)
+linear_model <- lm(profits ~ sales)
+plot(sales, profits)
+abline(linear_model, col='red')
+```
+$$b$$
+**Q: ** *Estimate now an appropriate nonlinear regression which might fit the data better. Add the regression curve to the plot and compare the fit with the fit of the linear model.*
+**A: ** 
+```{r}
+non_linear_model <- nls(profits ~ a * log(sales) + b * sales + c, start = list(a = -1, b = 1, c = 1000))
+profits_hat_linear <- predict(linear_model)
+profits_hat_non_linear <- predict(non_linear_model)
+
+plot(sales, profits)
+lines(sales, profits_hat_linear, col = "red")
+lines(sales, profits_hat_non_linear, col = "blue")
+```
+
+```{r}
+loss.functions = function(x, x.hat)
+{
+  res = c(mean((x - x.hat) ^ 2), 
+          mean(abs(x - x.hat)), 
+          mean(abs((x - x.hat) / x )))
+  names(res) = c("MSE","MAE", "MAPE")
+  return(res);
+}
+loss.functions(profits, profits_hat_linear)
+loss.functions(profits, profits_hat_non_linear)
+```
+```{r}
+cat("Correlation of profits with profits estimated by a linear model: ", cor(profits, profits_hat_linear), "\n")
+cat("Correlation of profits with profits estimated by a non-linear model: ", cor(profits, profits_hat_non_linear), "\n")
+```
+Model became better, but not much. I am not very good at guessing :(
+$$c$$
+**Q: ** *Explain in your own words, why all the classical tests and inferences are not directly applicable to the NLS estimators.*  
+**A: ** For a linear regression: SS Regression + SS Error = SS Total. But for non-linear models this equation is not true. Also I googled and found that:  
+1) R-squared tends to be uniformly high for both very bad and very good models.  
+2) R-squared and adjusted R-squared do not always increase for better nonlinear models.  
+3) Using R-squared and adjusted R-squared to choose the final model led to the correct model only 28-43% of the time.  
+$$--3--$$
+$$a$$
+**Q: ** *An important calibration parameter of a nonparametric regression is the band-width. Explain what happens with the regression/the weights in the Nadaraya-Watson regression if the bandwidth is too high or too small.*  
+**A: ** When a bandwidth is too high, our model is not fitting data good, it's more like a straight line. It's called underfitting.
+On the other hand, when bandwidth is too small, our model is overfitted. Tt's trying to pass through each point in out dataset, which is not good for future predictions.  
+$$b$$
+**Q:** *Fit a Nadaraya-Watson regression with Gaussian kernel and “optimal” bandwidth to the profits/sales data. Check and explain how the “optimal bandwidth” is determined in your software. Plot the data and the regression curve.*  
+**A: **
+```{r}
+bandwidth <- npregbw(profits ~ sales, lt = "lc")
+nw_model <- npreg(bws = bandwidth)
+plot(sales, profits)
+lines(sales, fitted(nw_model), col = "red")
+```
+  
+The optimal bandwith is determined using Kullback-Leibler topology.
+$$--c--$$
+**Q: ** *Compare the fit of the nonparametric regression and the nonlinear regression in the previous subproblem.*
+**A: **
+```{r}
+profits_hat_non_parametric <- predict(nw_model)
+cor(profits, profits_hat_non_linear)
+cor(profits, profits_hat_non_parametric)
+```
+```{r}
+loss.functions(profits, profits_hat_non_linear)
+loss.functions(profits, profits_hat_non_parametric)
+```
+A non-parametric model has better fit than non-linear one.  
+$$--4--$$
+$$a$$
+**Q: ** *Fit a logistic regression to explain Y by the remaining explanatory variables. Run a stepwise model selection using AIC as criterion. Further consider only the optimal model chosen here.*
+**A: **
+```{r}
+new_data <- data
+new_data$high_salary <- ifelse(new_data$salary > 2000, 1, 0)
+new_data$salary <- NULL
+new_data$totcomp <- NULL
+logit_model <- glm(high_salary ~ ., family=binomial(link='logit'), data=new_data)
+summary(logit_model)
+fitted_model <- step(logit_model, direction = "both")
+```
+$$--b--$$
+**Q: ** *Consider the explanatory variable sales. Obviously its parameter cannot be intepreted in the same way as for a linear regression. Provide the correct intepretation using odds. *
+**A: **
+```{r}
+exp(coef(fitted_model))
+```
+From this output we can see that a unit increase in sales increases the probability of having a high salary by 0.0000263%.  
+$$--c--$$
+**Q: ** *Randomly pick up five CEOs. Determine their probabilities of having the salary of more or less than 2000. Provide for the first of them the formula which may be used to compute this probability with inserted values of parameters and variables. If you want to predict the membership in one of the two groups for a particular CEO, what is the simplest way to proceed using these probabilities?*  
+**A: **
+```{r}
+random_ceos <- new_data[10:15,]
+random_ceos$high_salary_hat <- predict(fitted_model, newdata = random_ceos, type = "response")
+random_ceos$high_salary_hat
+```
+The simplest way to predict a membership in this case is to set threshold to 1/2. If high_salary_hat is greater than this threshold then CEO has high salary, otherwise - low salary.
