@@ -15,5 +15,11 @@ object main {
     println()
     machine.run(expression4, environment)
     println()
+    val expression5 = <(Sum(Number(3), Number(6)), Number(5))
+    val expression6 = <(Sum(Number(3), Number(6)), Sum(Mult(Var("x"), Number(3)), Var("y")))
+    machine.run(expression5, environment)
+    println()
+    machine.run(expression6, environment)
+    println()
   }
 }

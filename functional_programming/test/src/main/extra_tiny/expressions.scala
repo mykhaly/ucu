@@ -1,29 +1,24 @@
 sealed trait Expr {
+  def eval_binary_operation(operand: Expr): Expr = operand match {
+    case Number(_) => operand
+    case Bool(_) => operand
+    case _ => operand.evaluate
+  }
+
   def evaluate: Expr = this match {
-    case Number(n) => Number(n)
-    case Sum(l, r) => {
-      val left = l match {
-        case Number(_) => l
-        case _ => l.evaluate
-      }
-      val right = r match {
-        case Number(_) => r
-        case _ => r.evaluate
-      }
-      Number(left.asInstanceOf[Number].n + right.asInstanceOf[Number].n)
-//      l.evaluate.asInstanceOf[Number] + r.evaluate.asInstanceOf[Number]
-    }
-    case Mult(l, r) => {
-      val left = l match {
-        case Number(_) => l
-        case _ => l.evaluate
-      }
-      val right = r match {
-        case Number(_) => r
-        case _ => r.evaluate
-      }
-      Number(left.asInstanceOf[Number].n * right.asInstanceOf[Number].n)
-    }
+    case Sum(l, r) => Number(
+      eval_binary_operation(l).asInstanceOf[Number].n +
+      eval_binary_operation(r).asInstanceOf[Number].n
+    )
+    case Mult(l, r) => Number(
+      eval_binary_operation(l).asInstanceOf[Number].n *
+      eval_binary_operation(r).asInstanceOf[Number].n
+    )
+    case <(l, r) => Bool(
+      eval_binary_operation(l).asInstanceOf[Number].n <
+      eval_binary_operation(r).asInstanceOf[Number].n
+    )
+    case _ => this
   }
 
   def show: String = this match {
@@ -31,11 +26,14 @@ sealed trait Expr {
     case Sum(left, right) => left.show + " + " + right.show
     case Var(x) => x
     case Mult(_, _) => this.show
+    case Bool(b) => b.toString
+    case <(_, _) => this.show
   }
 
   def isReducible: Boolean = {
     this match {
       case Number(_) => false
+      case Bool(_) => false
       case _ => true
     }
   }
@@ -62,4 +60,18 @@ case class Mult(l: Expr, r: Expr) extends Expr {
   }
 
   override def show: String = show_operand(l) + " * " + show_operand(r)
+}
+
+case class Bool(b: Boolean) extends Expr
+
+case class <(l: Expr, r: Expr) extends Expr {
+  private def show_operand(operand: Expr): String = {
+    operand match {
+      case Sum(_, _) => "(" + operand.show + ")"
+      case Mult(_, _) => "(" + operand.show + ")"
+      case _ => operand.show
+    }
+  }
+
+  override def show: String = show_operand(l) + " < " + show_operand(r)
 }
