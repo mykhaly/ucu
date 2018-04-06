@@ -2,13 +2,19 @@ final class Machine {
   def run(expr: Expr, env: Map[String, Expr]): Option[Expr] = {
     println(expr)
 
-    if (expr.isReducible) try
-      run(reductionStep(expr, env), env)
-    catch {
-      case exception: TinyException => println(exception.getMessage)
-        None
+    if (expr.isReducible) {
+      try
+        run(reductionStep(expr, env), env)
+      catch {
+        case exception: TinyException =>
+          println("TinyException: " + exception.getMessage + "\n")
+          None
+      }
     }
-    else Option(expr)
+    else {
+      println()
+      Option(expr)
+    }
   }
 
   def reductionStep(expr: Expr, env: Map[String, Expr]): Expr = {
@@ -19,9 +25,7 @@ final class Machine {
     }
 
     expr match {
-      case Number(_) => expr
-
-      case Bool(_) => expr
+      case Number(_) | Bool(_) => expr
 
       case Mult(l, r) => binary_operator_reduction(Mult.apply, l, r)
 
@@ -31,12 +35,12 @@ final class Machine {
 
       case Var(x) =>
         if (env.contains(x)) env(x)
-        else throw TinyException(s"Can't find variable $x in environment")
+        else throw TinyException(s"Can't find variable $x in the environment")
 
       case IfElse(c, t, f) =>
         if (c.isReducible) IfElse(reductionStep(c, env), t, f)
         else
-          if(c.asInstanceOf[Bool].b) reductionStep(t, env)
+          if(c.toBoolean) reductionStep(t, env)
           else reductionStep(f, env)
     }
   }

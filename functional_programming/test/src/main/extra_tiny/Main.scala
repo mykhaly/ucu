@@ -1,4 +1,4 @@
-object main {
+object Main {
   def main(args: Array[String]): Unit = {
     val machine = new Machine()
     val environment = Map(
@@ -23,23 +23,19 @@ object main {
     )
     // 2 + true
     val expression7 = Sum(Number(2), Var("t"))
+    // if (3 + 6) < 10 then (x + 3) * y else 5
+    val expression8 = IfElse(
+      Less(Sum(Number(3), Number(6)), Number(10)),
+      Mult(Sum(Var("x"), Number(3)), Var("y")),
+      Number(5))
 
-    val expression8 = IfElse(Less(Sum(Number(3), Number(6)), Number(10)), Mult(Sum(Var("x"), Number(3)), Var("y")), Number(5))
     machine.run(expression1, environment)
-    println()
     machine.run(expression2, environment)
-    println()
     machine.run(expression3, environment)
-    println()
     machine.run(expression4, environment)
-    println()
     machine.run(expression5, environment)
-    println()
     machine.run(expression6, environment)
-    println()
     machine.run(expression7, environment)
-    println()
     machine.run(expression8, environment)
-    println()
   }
 }
