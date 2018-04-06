@@ -19,27 +19,19 @@ sealed trait Expr {
     }
   }
 
-  def reduce: Expr = {
-    this match {
-      case Number(n) => Number(n)
-      case Mult(l, r) =>
-        if (l.isReducible) Mult(l.reduce, r)
-        else if (r.isReducible) Mult(l, r.reduce)
-        else Number(this.evaluate)
-      case Sum(l, r) =>
-        if (l.isReducible) Sum(l.reduce, r)
-        else if (r.isReducible) Sum(l, r.reduce)
-        else Number(this.evaluate)
-      }
-  }
-
   override def toString: String = this.show
 }
 
+
 case class Number(n: Int) extends Expr
+
+
 case class Var(x: String) extends Expr
 
+
 case class Sum(l: Expr, r: Expr) extends Expr
+
+
 case class Mult(l: Expr, r: Expr) extends Expr {
   private def show_operand(operand: Expr): String = {
     operand match {
@@ -47,5 +39,6 @@ case class Mult(l: Expr, r: Expr) extends Expr {
       case _ => operand.show
     }
   }
+
   override def show: String = show_operand(l) + " * " + show_operand(r)
 }

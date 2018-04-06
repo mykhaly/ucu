@@ -1,12 +1,17 @@
 final class Machine {
-  def run(expr: Expr, env: Map[String, Int]): Expr = {
+  def run(expr: Expr, env: Map[String, Int]): Option[Expr] = {
     println(expr)
 
     if (expr.isReducible) {
-      run(reductionStep(expr, env), env)
+      try
+        run(reductionStep(expr, env), env)
+      catch {
+        case exception: IllegalArgumentException => println(exception.getMessage)
+          None
+      }
     }
     else {
-      expr
+      Option(expr)
     }
   }
 
@@ -21,7 +26,9 @@ final class Machine {
         if (l.isReducible) Sum(reductionStep(l, env), r)
         else if (r.isReducible) Sum(l, reductionStep(r, env))
         else Number(expr.evaluate)
-      case Var(x) => Number(env(x))
+      case Var(x) =>
+        if (env.contains(x)) Number(env(x))
+        else throw new IllegalArgumentException(s"Can't find variable $x in environment")
     }
   }
 }
