@@ -1,7 +1,7 @@
 sealed trait Expr {
   def eval_binary_operation(operand: Expr): Expr = operand match {
     case Number(_) => operand
-    case Bool(_) => operand
+    case Bool(_) => throw TinyException(s"Operands of type Boolean are not supported")
     case _ => operand.evaluate
   }
 
@@ -14,7 +14,7 @@ sealed trait Expr {
       eval_binary_operation(l).asInstanceOf[Number].n *
       eval_binary_operation(r).asInstanceOf[Number].n
     )
-    case <(l, r) => Bool(
+    case Less(l, r) => Bool(
       eval_binary_operation(l).asInstanceOf[Number].n <
       eval_binary_operation(r).asInstanceOf[Number].n
     )
@@ -27,7 +27,7 @@ sealed trait Expr {
     case Var(x) => x
     case Mult(_, _) => this.show
     case Bool(b) => b.toString
-    case <(_, _) => this.show
+    case Less(_, _) => this.show
   }
 
   def isReducible: Boolean = {
@@ -64,7 +64,7 @@ case class Mult(l: Expr, r: Expr) extends Expr {
 
 case class Bool(b: Boolean) extends Expr
 
-case class <(l: Expr, r: Expr) extends Expr {
+case class Less(l: Expr, r: Expr) extends Expr {
   private def show_operand(operand: Expr): String = {
     operand match {
       case Sum(_, _) => "(" + operand.show + ")"
@@ -75,3 +75,4 @@ case class <(l: Expr, r: Expr) extends Expr {
 
   override def show: String = show_operand(l) + " < " + show_operand(r)
 }
+

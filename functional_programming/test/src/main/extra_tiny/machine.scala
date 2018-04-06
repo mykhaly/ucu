@@ -1,12 +1,13 @@
+
 final class Machine {
-  def run(expr: Expr, env: Map[String, Int]): Option[Expr] = {
+  def run(expr: Expr, env: Map[String, Expr]): Option[Expr] = {
     println(expr)
 
     if (expr.isReducible) {
       try
         run(reductionStep(expr, env), env)
       catch {
-        case exception: IllegalArgumentException => println(exception.getMessage)
+        case exception: TinyException => println(exception.getMessage)
           None
       }
     }
@@ -15,7 +16,7 @@ final class Machine {
     }
   }
 
-  def reductionStep(expr: Expr, env: Map[String, Int]): Expr = {
+  def reductionStep(expr: Expr, env: Map[String, Expr]): Expr = {
     expr match {
       case Number(_) => expr
 
@@ -32,12 +33,12 @@ final class Machine {
         else expr.evaluate
 
       case Var(x) =>
-        if (env.contains(x)) Number(env(x))
-        else throw new IllegalArgumentException(s"Can't find variable $x in environment")
+        if (env.contains(x)) env(x)
+        else throw TinyException(s"Can't find variable $x in environment")
 
-      case <(l, r) =>
-        if (l.isReducible) <(reductionStep(l, env), r)
-        else if (r.isReducible) <(l, reductionStep(r, env))
+      case Less(l, r) =>
+        if (l.isReducible) Less(reductionStep(l, env), r)
+        else if (r.isReducible) Less(l, reductionStep(r, env))
         else expr.evaluate
     }
   }
