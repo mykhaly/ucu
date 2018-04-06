@@ -6,6 +6,7 @@ object main {
     val expression2 = Mult(Number(2), Sum(Number(3), Number(6)))
     val expression3 = Sum(Mult(Var("x"), Number(3)), Var("y"))
     val expression4 = Mult(Sum(Var("z"), Number(2)), Sum(Number(4), Var("y")))
+//    assert(machine.run(expression1, environment) == Number(252))
     machine.run(expression1, environment)
     println()
     machine.run(expression2, environment)

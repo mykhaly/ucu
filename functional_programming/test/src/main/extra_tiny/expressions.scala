@@ -1,8 +1,29 @@
 sealed trait Expr {
   def evaluate: Expr = this match {
     case Number(n) => Number(n)
-    case Sum(l, r) => l.evaluate.asInstanceOf[Number] + r.evaluate.asInstanceOf[Number]
-    case Mult(l, r) => l.evaluate.asInstanceOf[Number] * r.evaluate.asInstanceOf[Number]
+    case Sum(l, r) => {
+      val left = l match {
+        case Number(_) => l
+        case _ => l.evaluate
+      }
+      val right = r match {
+        case Number(_) => r
+        case _ => r.evaluate
+      }
+      Number(left.asInstanceOf[Number].n + right.asInstanceOf[Number].n)
+//      l.evaluate.asInstanceOf[Number] + r.evaluate.asInstanceOf[Number]
+    }
+    case Mult(l, r) => {
+      val left = l match {
+        case Number(_) => l
+        case _ => l.evaluate
+      }
+      val right = r match {
+        case Number(_) => r
+        case _ => r.evaluate
+      }
+      Number(left.asInstanceOf[Number].n * right.asInstanceOf[Number].n)
+    }
   }
 
   def show: String = this match {
@@ -23,10 +44,7 @@ sealed trait Expr {
 }
 
 
-case class Number(n: Int) extends Expr {
-  def +(that: Number): Number = Number(this.n + that.n)
-  def *(that: Number): Number = Number(this.n * that.n)
-}
+case class Number(n: Int) extends Expr
 
 
 case class Var(x: String) extends Expr
