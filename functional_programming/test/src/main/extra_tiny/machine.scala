@@ -3,17 +3,13 @@ final class Machine {
   def run(expr: Expr, env: Map[String, Expr]): Option[Expr] = {
     println(expr)
 
-    if (expr.isReducible) {
-      try
-        run(reductionStep(expr, env), env)
-      catch {
-        case exception: TinyException => println(exception.getMessage)
-          None
-      }
+    if (expr.isReducible) try
+      run(reductionStep(expr, env), env)
+    catch {
+      case exception: TinyException => println(exception.getMessage)
+        None
     }
-    else {
-      Option(expr)
-    }
+    else Option(expr)
   }
 
   def reductionStep(expr: Expr, env: Map[String, Expr]): Expr = {
@@ -40,6 +36,12 @@ final class Machine {
         if (l.isReducible) Less(reductionStep(l, env), r)
         else if (r.isReducible) Less(l, reductionStep(r, env))
         else expr.evaluate
+
+      case IfElse(c, t, f) =>
+        if (c.isReducible) IfElse(reductionStep(c, env), t, f)
+        else
+          if(c.asInstanceOf[Bool].b) reductionStep(t, env)
+          else reductionStep(f, env)
     }
   }
 }

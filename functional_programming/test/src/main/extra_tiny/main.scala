@@ -24,6 +24,7 @@ object main {
     // 2 + true
     val expression7 = Sum(Number(2), Var("t"))
 
+    val expression8 = IfElse(Less(Sum(Number(3), Number(6)), Number(10)), Mult(Sum(Var("x"), Number(3)), Var("y")), Number(5))
     machine.run(expression1, environment)
     println()
     machine.run(expression2, environment)
@@ -37,6 +38,8 @@ object main {
     machine.run(expression6, environment)
     println()
     machine.run(expression7, environment)
+    println()
+    machine.run(expression8, environment)
     println()
   }
 }

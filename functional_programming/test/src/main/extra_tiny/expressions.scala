@@ -18,6 +18,7 @@ sealed trait Expr {
       eval_binary_operation(l).asInstanceOf[Number].n <
       eval_binary_operation(r).asInstanceOf[Number].n
     )
+    case IfElse(c, t, f) => if (c.asInstanceOf[Bool].b) t.evaluate else f.evaluate
     case _ => this
   }
 
@@ -25,9 +26,8 @@ sealed trait Expr {
     case Number(n) => n.toString
     case Sum(left, right) => left.show + " + " + right.show
     case Var(x) => x
-    case Mult(_, _) => this.show
     case Bool(b) => b.toString
-    case Less(_, _) => this.show
+    case _ => this.show
   }
 
   def isReducible: Boolean = {
@@ -62,7 +62,9 @@ case class Mult(l: Expr, r: Expr) extends Expr {
   override def show: String = show_operand(l) + " * " + show_operand(r)
 }
 
+
 case class Bool(b: Boolean) extends Expr
+
 
 case class Less(l: Expr, r: Expr) extends Expr {
   private def show_operand(operand: Expr): String = {
@@ -76,3 +78,17 @@ case class Less(l: Expr, r: Expr) extends Expr {
   override def show: String = show_operand(l) + " < " + show_operand(r)
 }
 
+
+case class IfElse(condition: Expr, on_true: Expr, on_false: Expr) extends Expr {
+  private def show_operand(operand: Expr): String = {
+    operand match {
+      case Sum(_, _) => "(" + operand.show + ")"
+      case Mult(_, _) => "(" + operand.show + ")"
+      case Less(_, _) => "(" + operand.show + ")"
+      case _ => operand.show
+    }
+  }
+
+  override def show: String =
+    "if " + show_operand(condition) + " then " + show_operand(on_true) + " else " + show_operand(on_false)
+}
