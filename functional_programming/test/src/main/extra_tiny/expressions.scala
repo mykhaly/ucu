@@ -1,25 +1,27 @@
 sealed trait Expr {
-  def eval_binary_operation(operand: Expr): Expr = operand match {
-    case Number(_) => operand
-    case Bool(_) => throw TinyException(s"Operands of type Boolean are not supported")
-    case _ => operand.evaluate
-  }
+  def evaluate: Expr = {
+    def eval_operand(operand: Expr): Expr = operand match {
+      case Number(_) => operand
+      case Bool(_) => throw TinyException(s"Operands of type Boolean are not supported")
+      case _ => operand.evaluate
+    }
 
-  def evaluate: Expr = this match {
-    case Sum(l, r) => Number(
-      eval_binary_operation(l).asInstanceOf[Number].n +
-      eval_binary_operation(r).asInstanceOf[Number].n
-    )
-    case Mult(l, r) => Number(
-      eval_binary_operation(l).asInstanceOf[Number].n *
-      eval_binary_operation(r).asInstanceOf[Number].n
-    )
-    case Less(l, r) => Bool(
-      eval_binary_operation(l).asInstanceOf[Number].n <
-      eval_binary_operation(r).asInstanceOf[Number].n
-    )
-    case IfElse(c, t, f) => if (c.asInstanceOf[Bool].b) t.evaluate else f.evaluate
-    case _ => this
+    this match {
+      case Sum(l, r) => Number(
+        eval_operand(l).asInstanceOf[Number].n +
+        eval_operand(r).asInstanceOf[Number].n
+      )
+      case Mult(l, r) => Number(
+        eval_operand(l).asInstanceOf[Number].n *
+        eval_operand(r).asInstanceOf[Number].n
+      )
+      case Less(l, r) => Bool(
+        eval_operand(l).asInstanceOf[Number].n <
+        eval_operand(r).asInstanceOf[Number].n
+      )
+      case IfElse(c, t, f) => if (c.asInstanceOf[Bool].b) t.evaluate else f.evaluate
+      case _ => this
+    }
   }
 
   def show: String = this match {
