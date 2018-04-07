@@ -37,5 +37,41 @@ object Main {
     machine.run(expression6, environment)
     machine.run(expression7, environment)
     machine.run(expression8, environment)
+
+    val statMachine = new StatementMachine(environment)
+    val statement1 = DoNothing()
+    val statement2 = Assignment("y", Sum(Sum(Number(3), Number(4)), Number(4)))
+    val statement3 = IfElseStatement(
+      Less(Number(5), Number(4)),
+      DoNothing(),
+      Assignment("y", Sum(Sum(Number(3), Number(4)), Number(4)))
+    )
+    val statement4 = IfElseStatement(
+      Less(Number(3), Number(4)),
+      Assignment("a", Sum(Mult(Number(3), Number(4)), Number(4))),
+      Assignment("b", Sum(Mult(Number(3), Number(4)), Number(4)))
+    )
+    val statement5 = IfElseStatement(
+      IfElse(Less(Number(2), Number(5)), Less(Number(3), Number(4)), Bool(false)),
+      DoNothing(),
+      Assignment("c", Mult(Sum(Number(3), Number(4)), Number(4)))
+    )
+    val statement6 = While(
+      Less(Sum(Var("x"), Number(3)), Number(7)),
+      Assignment("x", Sum(Var("x"), Number(1)))
+    )
+    val statement7 = Sequence(List[Statement](
+      Assignment("x", Bool(true)),
+      IfElseStatement(Var("x"), Assignment("x", Number(1)), Assignment("x", Number(0))),
+      DoNothing()
+    ))
+
+    statMachine.run(statement1)
+    statMachine.run(statement2)
+    statMachine.run(statement3)
+    statMachine.run(statement4)
+    statMachine.run(statement5)
+    statMachine.run(statement6)
+    statMachine.run(statement7)
   }
 }
