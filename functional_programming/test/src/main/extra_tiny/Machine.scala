@@ -1,26 +1,24 @@
-final class Machine {
-  def run(expr: Expr, env: Map[String, Expr]): Option[Expr] = {
-    println(expr)
+final class Machine (environment: Map[String, Expr]) {
+  var env: Map[String, Expr] = environment
 
-    if (expr.isReducible) {
-      try
-        run(reductionStep(expr, env), env)
-      catch {
-        case exception: TinyException =>
-          println("TinyException: " + exception.getMessage + "\n")
-          None
-      }
+  def run(expr: Expr): Option[Expr] = try Some(runInternal(expr))
+    catch {
+      case exception: TinyException =>
+        println("TinyException: " + exception.getMessage + "\n")
+        None
     }
-    else {
-      println()
-      Option(expr)
-    }
+
+  private def runInternal(expr: Expr): Expr = {
+    println(s"Expr: $expr\n")
+
+    if (expr.isReducible) runInternal(reductionStep(expr))
+    else expr
   }
 
-  def reductionStep(expr: Expr, env: Map[String, Expr]): Expr = {
+  private def reductionStep(expr: Expr): Expr = {
     def binary_operator_reduction(operator: (Expr, Expr) => Expr, l: Expr, r: Expr): Expr = {
-      if (l.isReducible) operator(reductionStep(l, env), r)
-      else if (r.isReducible) operator(l, reductionStep(r, env))
+      if (l.isReducible) operator(reductionStep(l), r)
+      else if (r.isReducible) operator(l, reductionStep(r))
       else expr.evaluate
     }
 
@@ -38,10 +36,61 @@ final class Machine {
         else throw TinyException(s"Can't find variable $x in the environment")
 
       case IfElse(c, t, f) =>
-        if (c.isReducible) IfElse(reductionStep(c, env), t, f)
+        if (c.isReducible) IfElse(reductionStep(c), t, f)
         else
-          if(c.toBoolean) reductionStep(t, env)
-          else reductionStep(f, env)
+          if(c.toBoolean) reductionStep(t)
+          else reductionStep(f)
+    }
+  }
+
+  def run(st: Statement): Option[Statement] = try Some(runInternal(st))
+    catch {
+      case exception: TinyException =>
+        println("TinyException: " + exception.getMessage + "\n")
+        None
+    }
+
+  private def runInternal(st: Statement): Statement = {
+    println(s"Environment: $env")
+    println(s"Statement: $st\n")
+
+    if (st.isReducible) runInternal(reductionStep(st))
+    else st
+  }
+
+  private def reductionStep(st: Statement): Statement = {
+    st match {
+      case Assignment(n, v) =>
+        if (v.isReducible)
+          Assignment(n, reductionStep(v))
+        else {
+          env += n -> v
+          println()
+          DoNothing()
+        }
+
+      case IfElseStatement(c, t, f) =>
+        if (c.isReducible) IfElseStatement(reductionStep(c), t, f)
+        else if(c.toBoolean) t else f
+
+      case While(c, body) =>
+        val reduced_cond = if (c.isReducible) {
+          run(c).getOrElse(Bool(false)).toBoolean
+        } else c.toBoolean
+
+        if (reduced_cond) {
+          run(body)
+          While(c, body)
+        }
+        else DoNothing()
+
+      case Sequence(s) =>
+        if (s.isEmpty) DoNothing() else {
+          runInternal(s.head)
+          runInternal(Sequence(s.tail))
+        }
+
+      case _ => DoNothing()
     }
   }
 }

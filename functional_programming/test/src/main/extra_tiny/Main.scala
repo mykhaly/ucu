@@ -1,11 +1,11 @@
 object Main {
   def main(args: Array[String]): Unit = {
-    val machine = new Machine()
     val environment = Map(
       "x" -> Number(1),
       "y" -> Number(3),
       "t" -> Bool(true)
     )
+    val machine = new Machine(environment)
     // 3 * 2 * 7 * 6
     val expression1 = Mult(Mult(Number(3), Number(2)), Mult(Number(7), Number(6)))
     // 2 * (3 + 6)
@@ -29,16 +29,15 @@ object Main {
       Mult(Sum(Var("x"), Number(3)), Var("y")),
       Number(5))
 
-    machine.run(expression1, environment)
-    machine.run(expression2, environment)
-    machine.run(expression3, environment)
-    machine.run(expression4, environment)
-    machine.run(expression5, environment)
-    machine.run(expression6, environment)
-    machine.run(expression7, environment)
-    machine.run(expression8, environment)
+    machine.run(expression1)
+    machine.run(expression2)
+    machine.run(expression3)
+    machine.run(expression4)
+    machine.run(expression5)
+    machine.run(expression6)
+    machine.run(expression7)
+    machine.run(expression8)
 
-    val statMachine = new StatementMachine(environment)
     val statement1 = DoNothing()
     val statement2 = Assignment("y", Sum(Sum(Number(3), Number(4)), Number(4)))
     val statement3 = IfElseStatement(
@@ -66,12 +65,12 @@ object Main {
       DoNothing()
     ))
 
-    statMachine.run(statement1)
-    statMachine.run(statement2)
-    statMachine.run(statement3)
-    statMachine.run(statement4)
-    statMachine.run(statement5)
-    statMachine.run(statement6)
-    statMachine.run(statement7)
+    machine.run(statement1)
+    machine.run(statement2)
+    machine.run(statement3)
+    machine.run(statement4)
+    machine.run(statement5)
+    machine.run(statement6)
+    machine.run(statement7)
   }
 }
