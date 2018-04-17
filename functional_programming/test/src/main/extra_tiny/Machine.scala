@@ -1,24 +1,23 @@
-final class Machine (environment: Map[String, Expr]) {
-  var env: Map[String, Expr] = environment
-
-  def run(expr: Expr): Option[Expr] = try Some(runInternal(expr))
+final class Machine {
+  def reduce(expr: Expr, env: Map[String, Expr]): Expr = try runInternal(expr, env)
     catch {
       case exception: TinyException =>
         println("TinyException: " + exception.getMessage + "\n")
-        None
+        expr
     }
 
-  private def runInternal(expr: Expr): Expr = {
-    println(s"Expr: $expr\n")
+  private def runInternal(expr: Expr, env: Map[String, Expr]): Expr = {
+    println(s"Environment:\n$env")
+    println(s"Expr:\n$expr\n")
 
-    if (expr.isReducible) runInternal(reductionStep(expr))
+    if (expr.isReducible) runInternal(reductionStep(expr, env), env)
     else expr
   }
 
-  private def reductionStep(expr: Expr): Expr = {
+  def reductionStep(expr: Expr, env: Map[String, Expr]): Expr = {
     def binary_operator_reduction(operator: (Expr, Expr) => Expr, l: Expr, r: Expr): Expr = {
-      if (l.isReducible) operator(reductionStep(l), r)
-      else if (r.isReducible) operator(l, reductionStep(r))
+      if (l.isReducible) operator(reductionStep(l, env), r)
+      else if (r.isReducible) operator(l, reductionStep(r, env))
       else expr.evaluate
     }
 
@@ -36,61 +35,56 @@ final class Machine (environment: Map[String, Expr]) {
         else throw TinyException(s"Can't find variable $x in the environment")
 
       case IfElse(c, t, f) =>
-        if (c.isReducible) IfElse(reductionStep(c), t, f)
+        if (c.isReducible) IfElse(reductionStep(c, env), t, f)
         else
-          if(c.toBoolean) reductionStep(t)
-          else reductionStep(f)
+          if(c.toBoolean) runInternal(t, env)
+          else runInternal(f, env)
     }
   }
 
-  def run(st: Statement): Option[Statement] = try Some(runInternal(st))
+  def run(st: Statement, env: Map[String, Expr]): Map[String, Expr] =
+    try runInternal(st, env)
     catch {
       case exception: TinyException =>
         println("TinyException: " + exception.getMessage + "\n")
-        None
+        env + ("___error" -> Except(exception.getMessage))
     }
 
-  private def runInternal(st: Statement): Statement = {
-    println(s"Environment: $env")
-    println(s"Statement: $st\n")
+  private def runInternal(st: Statement, env: Map[String, Expr]): Map[String, Expr] = {
+    println(s"Environment:\n$env")
+    println(s"Statement:\n$st\n")
 
-    if (st.isReducible) runInternal(reductionStep(st))
-    else st
+    if (st.isReducible) reductionStep(st, env)
+    else env
   }
 
-  private def reductionStep(st: Statement): Statement = {
+  private def reductionStep(st: Statement, env: Map[String, Expr]): Map[String, Expr] = {
     st match {
       case Assignment(n, v) =>
         if (v.isReducible)
-          Assignment(n, reductionStep(v))
+          runInternal(Assignment(n, reductionStep(v, env)), env)
         else {
-          env += n -> v
-          println()
-          DoNothing()
+          env + (n -> v)
         }
 
       case IfElseStatement(c, t, f) =>
-        if (c.isReducible) IfElseStatement(reductionStep(c), t, f)
-        else if(c.toBoolean) t else f
+        if (c.isReducible) runInternal(IfElseStatement(reductionStep(c, env), t, f), env)
+        else if(c.toBoolean) runInternal(t, env) else runInternal(f, env)
 
       case While(c, body) =>
-        val reduced_cond = if (c.isReducible) {
-          run(c).getOrElse(Bool(false)).toBoolean
-        } else c.toBoolean
+        val reduced_cond = if (c.isReducible) reduce(c, env).toBoolean else c.toBoolean
 
         if (reduced_cond) {
-          run(body)
-          While(c, body)
+          run(While(c, body), run(body, env))
         }
-        else DoNothing()
+        else env
 
       case Sequence(s) =>
-        if (s.isEmpty) DoNothing() else {
-          runInternal(s.head)
-          runInternal(Sequence(s.tail))
+        if (s.isEmpty) env else {
+          runInternal(Sequence(s.tail), runInternal(s.head, env))
         }
 
-      case _ => DoNothing()
+      case _ => env
     }
   }
 }

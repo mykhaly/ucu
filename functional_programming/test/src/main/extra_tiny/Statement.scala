@@ -5,9 +5,9 @@ sealed trait Statement {
     case IfElseStatement(c, t, f) =>
       s"IF (" + c.show + "): \n\t" + t.show + "\nELSE:\n\t" + f.show
     case While(c, b) =>
-      s"WHILST(" + c.show + "):\n\t" + b.show
+      s"WHILE(" + c.show + "):\n\t" + b.show
     case Sequence(s) =>
-      if (s.nonEmpty) "\n " + s.head.show + "\n" + Sequence(s.tail).show else "\nEND OF SEQ"
+      if (s.nonEmpty) "\n" + s.head.show + "\n" + Sequence(s.tail).show else ""
   }
 
   def isReducible: Boolean = this match {

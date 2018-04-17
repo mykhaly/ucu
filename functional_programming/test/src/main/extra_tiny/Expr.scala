@@ -16,6 +16,7 @@ sealed trait Expr {
       case IfElse(c, t, f) =>
         if (c.toBoolean) t.evaluate
         else f.evaluate
+      case _ => throw TinyException("Can't evaluate an expression of " + this.getClass + ":" + this)
     }
   }
 
@@ -46,6 +47,8 @@ sealed trait Expr {
 
     case IfElse(c, t, f) =>
       "if " + c.show + " then " + t.show + " else " + f.show
+
+    case Except(m) => m
   }
 
   def isReducible: Boolean = {
@@ -94,3 +97,5 @@ case class Bool(b: Boolean) extends Expr
 case class Less(l: Expr, r: Expr) extends Expr
 
 case class IfElse(condition: Expr, on_true: Expr, on_false: Expr) extends Expr
+
+case class Except(m: String) extends Expr

@@ -5,7 +5,7 @@ object Main {
       "y" -> Number(3),
       "t" -> Bool(true)
     )
-    val machine = new Machine(environment)
+    val machine = new Machine
     // 3 * 2 * 7 * 6
     val expression1 = Mult(Mult(Number(3), Number(2)), Mult(Number(7), Number(6)))
     // 2 * (3 + 6)
@@ -29,14 +29,14 @@ object Main {
       Mult(Sum(Var("x"), Number(3)), Var("y")),
       Number(5))
 
-    machine.run(expression1)
-    machine.run(expression2)
-    machine.run(expression3)
-    machine.run(expression4)
-    machine.run(expression5)
-    machine.run(expression6)
-    machine.run(expression7)
-    machine.run(expression8)
+    machine.reduce(expression1, environment)
+    machine.reduce(expression2, environment)
+    machine.reduce(expression3, environment)
+    machine.reduce(expression4, environment)
+    machine.reduce(expression5, environment)
+    machine.reduce(expression6, environment)
+    machine.reduce(expression7, environment)
+    machine.reduce(expression8, environment)
 
     val statement1 = DoNothing()
     val statement2 = Assignment("y", Sum(Sum(Number(3), Number(4)), Number(4)))
@@ -65,12 +65,13 @@ object Main {
       DoNothing()
     ))
 
-    machine.run(statement1)
-    machine.run(statement2)
-    machine.run(statement3)
-    machine.run(statement4)
-    machine.run(statement5)
-    machine.run(statement6)
-    machine.run(statement7)
+    machine.run(statement1, environment)
+    machine.run(statement2, environment)
+    machine.run(statement3, environment)
+    machine.run(statement4, environment)
+    machine.run(statement5, environment)
+    machine.run(statement6, environment)
+    machine.run(statement7, environment)
+    println(machine.run(IfElseStatement(Number(3), DoNothing(), DoNothing()), environment))
   }
 }
